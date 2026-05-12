@@ -1,0 +1,13 @@
+# Local-only kubernetes config
+*.kubeconfig
+/.kube/
+
+# Editor scratch
+*.swp
+*.tmp
+.DS_Store
+.idea/
+.vscode/
+
+# Local Helm cache when previewing charts
+charts/
