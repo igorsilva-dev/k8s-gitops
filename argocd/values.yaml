@@ -1,0 +1,21 @@
+configs:
+  params:
+    server.insecure: true
+
+controller:
+  replicas: 1
+  metrics:
+    enabled: true
+
+redis-ha:
+  enabled: false
+
+server:
+  service:
+    type: ClusterIP
+
+dex:
+  enabled: false
+
+notifications:
+  enabled: false
