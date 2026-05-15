@@ -1,6 +1,13 @@
 configs:
   params:
     server.insecure: true
+    # Argo CD is currently reached through `kubectl proxy` (port-forward is
+    # broken on K3s 1.34 + containerd 2.1.x). rootpath / basehref tell the
+    # server and the SPA they live under the apiserver-proxy prefix so the
+    # JS makes API calls at the correct absolute path. Remove both when
+    # Istio + ingress lands in Phase 2.
+    server.rootpath: /api/v1/namespaces/argocd/services/http:argocd-server:http/proxy
+    server.basehref: /api/v1/namespaces/argocd/services/http:argocd-server:http/proxy/
 
 controller:
   replicas: 1
