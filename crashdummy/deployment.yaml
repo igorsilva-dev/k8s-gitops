@@ -23,7 +23,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: crashdummy
-          image: ghcr.io/igorsilva-dev/crashdummy:v0.1.0
+          image: ghcr.io/igorsilva-dev/crashdummy:0.1.0
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
