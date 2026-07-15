@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crashdummy-mappings
+  labels:
+    app.kubernetes.io/name: crashdummy
+    app.kubernetes.io/part-of: crashdummy
+data:
+  health.json: |
+    {
+      "request": { "method": "GET", "url": "/health" },
+      "response": { "status": 200, "bodyFileName": "health.json" }
+    }
+  create-order.json: |
+    {
+      "request": { "method": "POST", "url": "/orders" },
+      "response": { "status": 201, "bodyFileName": "created.json" }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crashdummy-proxies
+  labels:
+    app.kubernetes.io/name: crashdummy
+    app.kubernetes.io/part-of: crashdummy
+data:
+  test-health.json: |
+    {
+      "path": "/test-health",
+      "upstream": "http://localhost:10000/health",
+      "method": "GET",
+      "latencyInMilliseconds": 2000,
+      "jitterInMilliseconds": 2000
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: crashdummy-stubs
+  labels:
+    app.kubernetes.io/name: crashdummy
+    app.kubernetes.io/part-of: crashdummy
+data:
+  health.json: |
+    { "message": "Healthy !" }
+  created.json: |
+    { "status": "created", "id": "ord_demo_0001" }
