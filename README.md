@@ -132,6 +132,22 @@ For rotation: change the value in Doppler. ESO refreshes the Kubernetes Secret a
 
 Why ESO + Doppler over Sealed Secrets is in [`civo-infrastructure/docs/adr/0002-eso-over-sealed-secrets.md`](https://github.com/igorsilva-dev/civo-infrastructure/blob/main/docs/adr/0002-eso-over-sealed-secrets.md).
 
+## Tailscale (private access)
+
+The Tailscale operator (`applications/tailscale-operator.yaml`) gives the cluster a private edge: services are exposed on the tailnet, never on a public load balancer. One-time setup, outside git:
+
+1. **Tailnet policy** (admin console → Access controls):
+   ```json
+   "tagOwners": {
+     "tag:k8s-operator": ["autogroup:admin"],
+     "tag:k8s":          ["tag:k8s-operator"]
+   }
+   ```
+2. **OAuth client** (admin console → Settings → OAuth clients), tag `tag:k8s-operator`, scopes Devices → Core, Keys → Auth Keys and General → Services, all read + write.
+3. **Doppler** (`k8s-codeup` / `dev`): `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET`. External Secrets turns them into the `operator-oauth` Secret.
+
+The cluster is destroyed every night without the operator logging its devices out, so `civo-infrastructure`'s teardown deletes every `tag:k8s-operator` / `tag:k8s` device through the Tailscale API. Untagged devices (laptops, phones) are never touched.
+
 ## Accessing the Argo CD UI
 
 `kubectl port-forward` is broken on this cluster (K3s 1.34 + containerd 2.1.x CRI regression). Use `kubectl proxy` and the doubled URL (apiserver-proxy prefix + Argo CD's own rootpath, since the apiserver proxy strips the prefix on the way through):

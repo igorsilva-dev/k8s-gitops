@@ -1,0 +1,44 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tailscale-operator
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: tailscale
+  annotations:
+    # After the Doppler ClusterSecretStore (wave 0), so the OAuth ExternalSecret can resolve.
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  project: default
+  sources:
+    - repoURL: https://pkgs.tailscale.com/helmcharts
+      chart: tailscale-operator
+      targetRevision: 1.104.2
+      helm:
+        releaseName: tailscale-operator
+        valueFiles:
+          - $values/tailscale/values.yaml
+    - repoURL: https://github.com/igorsilva-dev/k8s-gitops
+      targetRevision: main
+      ref: values
+    # The operator-oauth Secret, from Doppler (credentials never go into git or Helm values).
+    - repoURL: https://github.com/igorsilva-dev/k8s-gitops
+      targetRevision: main
+      path: tailscale/config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: tailscale
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # The chart ships its CRDs as templates; some exceed the client-side apply annotation limit.
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        maxDuration: 5m
+        factor: 2

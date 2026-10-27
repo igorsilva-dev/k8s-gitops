@@ -1,0 +1,26 @@
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: operator-oauth
+  namespace: tailscale
+  labels:
+    app.kubernetes.io/part-of: tailscale
+  annotations:
+    # Before the operator Deployment (wave 0) in the same Application, so it starts with credentials.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: doppler
+    kind: ClusterSecretStore
+  target:
+    # The name and keys the chart mounts when oauth.clientId is unset.
+    name: operator-oauth
+    creationPolicy: Owner
+  data:
+    - secretKey: client_id
+      remoteRef:
+        key: TAILSCALE_OAUTH_CLIENT_ID
+    - secretKey: client_secret
+      remoteRef:
+        key: TAILSCALE_OAUTH_CLIENT_SECRET
