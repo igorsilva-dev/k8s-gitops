@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Phase 2 work begins after `v0.1.0`: Istio Application + values, kube-prometheus-stack Application + values, Grafana dashboards committed as raw manifests.
 
+### Changed
+
+- **Argo CD chart `7.7.10` → `10.11.6` (Argo CD v2.13 → v3.5.6) for Kubernetes 1.35.** On the `1.35.0-k3s1` cluster, Argo CD 2.13 could not diff Deployments (`.status.terminatingReplicas: field not declared in schema`), leaving `argocd`, `crashdummy` and `external-secrets` sync `Unknown`. Argo CD 3.5 is tested against Kubernetes 1.33–1.36. Bumped together with the Terraform bootstrap in civo-infrastructure, so both pin the same chart. `argocd/values.yaml` needs no changes: every key still exists in chart 10, and `configs.params` overrides (`server.insecure`, `rootpath`, `basehref`) keep working after chart 9 dropped their defaults. The Application already syncs with `ServerSideApply=true`, which Argo CD 3.3+ requires for self-managed upgrades (the ApplicationSet CRD exceeds the client-side apply annotation limit).
+
 ## [0.1.0] — 2026-05-18
 
 **Phase 1 — GitOps source of truth established.** First milestone release. Argo CD self-manages from this repo, External Secrets Operator is installed and wired to Doppler, and the workflow for adding new workloads + rotating secrets is documented.
