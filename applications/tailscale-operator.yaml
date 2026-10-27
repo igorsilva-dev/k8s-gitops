@@ -8,6 +8,10 @@ metadata:
   annotations:
     # After the Doppler ClusterSecretStore (wave 0), so the OAuth ExternalSecret can resolve.
     argocd.argoproj.io/sync-wave: "1"
+    # With ServerSideApply, a client-side diff flags the defaults the ExternalSecret CRD fills in
+    # (conversionStrategy, decodingStrategy, metadataPolicy, nullBytePolicy, deletionPolicy) as
+    # drift: OutOfSync forever. Server-side diff dry-runs the apply, so defaults land on both sides.
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: default
   sources:
