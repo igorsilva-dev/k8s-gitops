@@ -1,0 +1,21 @@
+# Tailscale Kubernetes operator (EDGE-001). Credentials come from the operator-oauth Secret
+# (tailscale/config/operator-oauth.yaml), so oauth.clientId / clientSecret stay unset here.
+
+operatorConfig:
+  # Must match the OAuth client's tag and the tailnet policy's tagOwners:
+  #   "tag:k8s-operator": ["autogroup:admin"], "tag:k8s": ["tag:k8s-operator"]
+  defaultTags:
+    - "tag:k8s-operator"
+  hostname: tailscale-operator
+  resources:
+    requests:
+      cpu: 10m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# Proxies the operator creates (Ingress, LoadBalancer) are tagged tag:k8s. The nightly teardown
+# deletes every tag:k8s-operator / tag:k8s device through the Tailscale API, since the cluster is
+# destroyed without the operator getting a chance to log them out.
+proxyConfig:
+  defaultTags: "tag:k8s"

@@ -8,6 +8,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Phase 2 work begins after `v0.1.0`: Istio Application + values, kube-prometheus-stack Application + values, Grafana dashboards committed as raw manifests.
 
+### Added
+
+- **Tailscale operator (EDGE-001)** in `applications/tailscale-operator.yaml`: chart `tailscale-operator 1.104.2` from `https://pkgs.tailscale.com/helmcharts`, namespace `tailscale`, sync-wave `1` (after the Doppler `ClusterSecretStore`). The `operator-oauth` Secret is an ExternalSecret from Doppler (`TAILSCALE_OAUTH_CLIENT_ID` / `TAILSCALE_OAUTH_CLIENT_SECRET`), synced at wave `-1` inside the Application so the operator starts with credentials; nothing sensitive goes into git or Helm values. The operator joins the tailnet as `tailscale-operator` (`tag:k8s-operator`); the proxies it creates are tagged `tag:k8s`. First step of the private edge: nothing is exposed yet (that's EDGE-002).
+
 ### Changed
 
 - **Argo CD chart `7.7.10` → `10.11.6` (Argo CD v2.13 → v3.5.6) for Kubernetes 1.35.** On the `1.35.0-k3s1` cluster, Argo CD 2.13 could not diff Deployments (`.status.terminatingReplicas: field not declared in schema`), leaving `argocd`, `crashdummy` and `external-secrets` sync `Unknown`. Argo CD 3.5 is tested against Kubernetes 1.33–1.36. Bumped together with the Terraform bootstrap in civo-infrastructure, so both pin the same chart. `argocd/values.yaml` needs no changes: every key still exists in chart 10, and `configs.params` overrides (`server.insecure`, `rootpath`, `basehref`) keep working after chart 9 dropped their defaults. The Application already syncs with `ServerSideApply=true`, which Argo CD 3.3+ requires for self-managed upgrades (the ApplicationSet CRD exceeds the client-side apply annotation limit).
