@@ -5,6 +5,10 @@ metadata:
   namespace: argocd
   labels:
     app.kubernetes.io/part-of: argocd
+  annotations:
+    # With ServerSideApply, a client-side diff flags the defaults the ExternalSecret CRD fills in
+    # as drift (see tailscale-operator.yaml). Server-side diff dry-runs the apply instead.
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
 spec:
   project: default
   sources:
@@ -18,7 +22,8 @@ spec:
     - repoURL: https://github.com/igorsilva-dev/k8s-gitops
       targetRevision: main
       ref: values
-    # The Tailscale Ingress (EDGE-002). Applied with the chart, so the UI comes up with Argo CD.
+    # The Tailscale Ingress (EDGE-002) and the admin password from Doppler. Applied with the chart,
+    # so the UI comes up with Argo CD.
     - repoURL: https://github.com/igorsilva-dev/k8s-gitops
       targetRevision: main
       path: argocd/config

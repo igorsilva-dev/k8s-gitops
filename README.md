@@ -152,7 +152,15 @@ The cluster is destroyed every night without the operator logging its devices ou
 
 Argo CD is on the tailnet only: **https://argocd.<tailnet>.ts.net** (the tailnet's name is under *DNS* in the Tailscale admin console). Any device signed in to the tailnet reaches it; nothing on the public internet does. The Tailscale operator runs the proxy behind [`argocd/config/ingress.yaml`](argocd/config/ingress.yaml) and terminates TLS with a Tailscale certificate.
 
-Login: `admin` / value of `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d`.
+Login: `admin` and the password whose bcrypt hash is `ARGOCD_ADMIN_PASSWORD_HASH` in Doppler (`k8s-codeup` / `dev`). It survives rebuilds: [`argocd/config/admin-password.yaml`](argocd/config/admin-password.yaml) merges the hash into `argocd-secret`. For the first minute of a fresh Cluster Up, before External Secrets syncs, only the random password in `argocd-initial-admin-secret` works.
+
+To change it:
+
+```sh
+htpasswd -nBC 10 "" | tr -d ':\n' | sed 's/^\$2y/$2a/' | pbcopy   # prompts for the password, copies the hash
+```
+
+Paste the hash into Doppler, bump `admin.passwordMtime` in `admin-password.yaml` (that logs out old sessions), and merge. Without a merge, the new hash still lands within the ExternalSecret's 1h refresh.
 
 The first request after a Cluster Up can take a minute: the proxy joins the tailnet and fetches its certificate on demand.
 
