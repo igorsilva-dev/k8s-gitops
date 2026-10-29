@@ -18,6 +18,10 @@ spec:
     - repoURL: https://github.com/igorsilva-dev/k8s-gitops
       targetRevision: main
       ref: values
+    # The Tailscale Ingress (EDGE-002). Applied with the chart, so the UI comes up with Argo CD.
+    - repoURL: https://github.com/igorsilva-dev/k8s-gitops
+      targetRevision: main
+      path: argocd/config
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd

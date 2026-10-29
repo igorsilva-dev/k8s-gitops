@@ -1,0 +1,19 @@
+# Argo CD on the tailnet (EDGE-002): https://argocd.<tailnet>.ts.net, reachable only from tailnet
+# devices. The Tailscale operator runs a proxy for it (a tag:k8s device) that terminates TLS with a
+# Tailscale-issued certificate, so argocd-server keeps serving plain HTTP (server.insecure).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd
+  namespace: argocd
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: argocd-server
+      port:
+        name: http
+  tls:
+    # The tailnet name, not a DNS host: Tailscale ignores rule hosts and takes it from here.
+    - hosts:
+        - argocd

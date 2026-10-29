@@ -150,14 +150,11 @@ The cluster is destroyed every night without the operator logging its devices ou
 
 ## Accessing the Argo CD UI
 
-`kubectl port-forward` is broken on this cluster (K3s 1.34 + containerd 2.1.x CRI regression). Use `kubectl proxy` and the doubled URL (apiserver-proxy prefix + Argo CD's own rootpath, since the apiserver proxy strips the prefix on the way through):
+Argo CD is on the tailnet only: **https://argocd.<tailnet>.ts.net** (the tailnet's name is under *DNS* in the Tailscale admin console). Any device signed in to the tailnet reaches it; nothing on the public internet does. The Tailscale operator runs the proxy behind [`argocd/config/ingress.yaml`](argocd/config/ingress.yaml) and terminates TLS with a Tailscale certificate.
 
-```sh
-kubectl proxy &
-open "http://localhost:8001/api/v1/namespaces/argocd/services/http:argocd-server:http/proxy/api/v1/namespaces/argocd/services/http:argocd-server:http/proxy/"
-```
+Login: `admin` / value of `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d`.
 
-Login: `admin` / value of `kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath='{.data.password}' | base64 -d`. The doubled URL goes away in Phase 2 once Istio + ingress lands.
+The first request after a Cluster Up can take a minute: the proxy joins the tailnet and fetches its certificate on demand.
 
 ## Related
 
