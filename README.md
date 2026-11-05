@@ -15,14 +15,27 @@ k8s-gitops/
 ├── applications/            # Argo CD Application CRs (watched by root-app)
 │   ├── argocd.yaml          # Argo CD self-managed (CIVO-006)
 │   ├── external-secrets.yaml         # ESO Helm chart (CIVO-007)
-│   └── external-secrets-config.yaml  # ClusterSecretStore + ExternalSecrets (CIVO-007)
+│   ├── external-secrets-config.yaml  # ClusterSecretStore + ExternalSecrets (CIVO-007)
+│   ├── tailscale-operator.yaml       # Tailscale operator (EDGE-001)
+│   ├── crashdummy.yaml               # Demo workload (Phase 1.5)
+│   ├── prometheus-operator-crds.yaml # ServiceMonitor / PodMonitor CRDs, no operator (OBS-001)
+│   ├── kube-state-metrics.yaml       # Object metrics (OBS-001)
+│   ├── node-exporter.yaml            # Node metrics (OBS-001)
+│   ├── alloy.yaml                    # The collector (OBS-001)
+│   └── observability-config.yaml     # ServiceMonitors for components that don't ship one (OBS-001)
 ├── argocd/
-│   └── values.yaml          # Argo CD chart values, consumed by applications/argocd.yaml via $values
-└── external-secrets/
-    ├── values.yaml          # ESO chart values, consumed by applications/external-secrets.yaml via $values
-    └── config/              # ESO runtime CRs (separate dir so the config Application can recurse cleanly without picking up values.yaml)
-        ├── cluster-secret-store.yaml
-        └── sandbox-demo-secret.yaml
+│   ├── values.yaml          # Argo CD chart values, consumed by applications/argocd.yaml via $values
+│   └── config/              # Tailscale Ingress + admin password ExternalSecret
+├── crashdummy/              # Raw manifests, including its ServiceMonitor
+├── external-secrets/
+│   ├── values.yaml          # ESO chart values, consumed by applications/external-secrets.yaml via $values
+│   └── config/              # ESO runtime CRs (separate dir so the config Application can recurse cleanly without picking up values.yaml)
+│       ├── cluster-secret-store.yaml
+│       └── sandbox-demo-secret.yaml
+├── observability/
+│   ├── alloy.yaml, kube-state-metrics.yaml, node-exporter.yaml   # chart values
+│   └── config/              # ServiceMonitors that live outside their workload's Application
+└── tailscale/               # Operator values + OAuth ExternalSecret
 ```
 
 ## How a workload reaches the cluster
@@ -86,7 +99,7 @@ For workloads that need cluster-side prerequisites (a new namespace with specifi
 - **Per-workload subfolders** at the repo root hold Helm values, raw manifests, or both.
 - **Multi-source Applications** for anything installed from an upstream Helm chart (chart from upstream repo + values from this repo via `$values` ref). Single-source when both chart and values are local.
 - **`syncPolicy.automated` with `prune: true` and `selfHeal: true`** for everything. Drift is auto-recovered (portfolio cluster, no humans tweaking).
-- **`syncOptions: ServerSideApply=true`** for anything with large CRDs (Argo CD, ESO, future Istio / Prometheus operator) to avoid client-side-apply annotation-size failures.
+- **`syncOptions: ServerSideApply=true`** for anything with large CRDs (Argo CD, ESO, the Tailscale operator, the Prometheus Operator CRDs) to avoid client-side-apply annotation-size failures.
 
 ## Sync waves
 
@@ -94,10 +107,10 @@ For workloads that need cluster-side prerequisites (a new namespace with specifi
 
 | Wave | Use case | Examples |
 |---|---|---|
-| `-2` | Operators whose CRDs others consume | `external-secrets` (ESO chart) |
+| `-2` | Operators whose CRDs others consume | `external-secrets` (ESO chart), `prometheus-operator-crds` |
 | `-1` | Operators with cluster-wide effects, no consumers in repo yet | reserved (cert-manager, kyverno) |
-| `0` | Default. Most workloads. | `argocd`, `external-secrets-config`, future monitoring / mesh |
-| `+1` | Consumers that need everything else healthy first | future kagent agents |
+| `0` | Default. Most workloads. | `argocd`, `external-secrets-config`, `kube-state-metrics`, `node-exporter`, `alloy` |
+| `+1` | Consumers that need everything else healthy first | `tailscale-operator`, `crashdummy`, `observability-config` |
 
 Within a single Application the same annotation orders resources, but with weaker guarantees — prefer splitting CRDs and CRs that consume them into separate Applications at different waves (see the `external-secrets` / `external-secrets-config` split for the canonical example).
 
@@ -147,6 +160,17 @@ The Tailscale operator (`applications/tailscale-operator.yaml`) gives the cluste
 3. **Doppler** (`k8s-codeup` / `dev`): `TAILSCALE_OAUTH_CLIENT_ID` and `TAILSCALE_OAUTH_CLIENT_SECRET`. External Secrets turns them into the `operator-oauth` Secret.
 
 The cluster is destroyed every night without the operator logging its devices out, so `civo-infrastructure`'s teardown deletes every `tag:k8s-operator` / `tag:k8s` device through the Tailscale API. Untagged devices (laptops, phones) are never touched.
+
+## Observability
+
+Phase 2's metrics pipeline starts with collection (OBS-001); storage (Mimir) and Grafana follow.
+
+- **Alloy** runs as a DaemonSet in `observability` and scrapes every target it finds: `ServiceMonitor` and `PodMonitor` objects anywhere in the cluster, plus the kubelet and cAdvisor on each node. Clustering spreads the targets across the Alloy pods, so each one is scraped once.
+- **Only the Prometheus Operator CRDs are installed.** No operator and no Prometheus server: the CRDs are just the declarative scrape list Alloy reads.
+- **kube-state-metrics** (Kubernetes objects) and **node-exporter** (each node) ship their own ServiceMonitors.
+- **Nothing is stored yet.** Every `forward_to` in [`observability/alloy.yaml`](observability/alloy.yaml) is empty until Mimir lands (OBS-002).
+
+To scrape a new workload, add a `ServiceMonitor` next to its manifests (see [`crashdummy/servicemonitor.yaml`](crashdummy/servicemonitor.yaml)). If its Application syncs before the CRDs on a fresh cluster, give it a `retry` policy, or put the ServiceMonitor in `observability/config/` (as for Argo CD, so a missing CRD can never fail Argo CD's own sync).
 
 ## Accessing the Argo CD UI
 
