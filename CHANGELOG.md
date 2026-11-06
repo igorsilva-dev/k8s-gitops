@@ -6,15 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
-Phase 2 work begins after `v0.1.0`: a private edge (Tailscale, Envoy Gateway) and an LGTM observability stack (Alloy, Mimir, Loki, Tempo, Grafana), all reconciled from this repo.
+Phase 2 work begins after `v0.1.0`: Istio Application + values, kube-prometheus-stack Application + values, Grafana dashboards committed as raw manifests.
 
 ### Added
 
-- **Metrics collection base (OBS-001)**, namespace `observability`:
-  - `applications/prometheus-operator-crds.yaml`: chart `prometheus-operator-crds 32.0.2` (operator `v0.94.2`) at sync-wave `-2`. The CRDs only, as the declarative scrape list; no operator, no Prometheus server.
-  - `applications/kube-state-metrics.yaml` (chart `8.8.0`, kube-state-metrics `2.20.0`) and `applications/node-exporter.yaml` (chart `prometheus-node-exporter 4.60.1`, node-exporter `1.12.1`) at wave `0`, each with its own ServiceMonitor.
-  - `applications/alloy.yaml`: chart `alloy 1.15.0` (Alloy `v1.21.3`), a DaemonSet with clustering, at wave `0`. Discovers ServiceMonitors and PodMonitors, and scrapes the kubelet and cAdvisor on every node. Every `forward_to` is empty until Mimir lands (OBS-002).
-  - `applications/observability-config.yaml` at wave `1`: a ServiceMonitor for Argo CD's application controller, kept out of `argocd/config` so a missing CRD can't fail Argo CD's self-sync. `crashdummy/servicemonitor.yaml` for crashdummy's `/metrics`.
 - **Tailscale operator (EDGE-001)** in `applications/tailscale-operator.yaml`: chart `tailscale-operator 1.104.2` from `https://pkgs.tailscale.com/helmcharts`, namespace `tailscale`, sync-wave `1` (after the Doppler `ClusterSecretStore`). The `operator-oauth` Secret is an ExternalSecret from Doppler (`TAILSCALE_OAUTH_CLIENT_ID` / `TAILSCALE_OAUTH_CLIENT_SECRET`), synced at wave `-1` inside the Application so the operator starts with credentials; nothing sensitive goes into git or Helm values. The operator joins the tailnet as `tailscale-operator` (`tag:k8s-operator`); the proxies it creates are tagged `tag:k8s`. First step of the private edge: nothing is exposed yet (that's EDGE-002).
 
 ### Changed
