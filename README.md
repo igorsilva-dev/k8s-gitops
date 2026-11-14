@@ -22,11 +22,13 @@ k8s-gitops/
 │   ├── kube-state-metrics.yaml       # Object metrics (OBS-001)
 │   ├── node-exporter.yaml            # Node metrics (OBS-001)
 │   ├── alloy.yaml                    # The collector (OBS-001)
-│   └── observability-config.yaml     # ServiceMonitors for components that don't ship one (OBS-001)
+│   ├── observability-config.yaml     # ServiceMonitors for components that don't ship one (OBS-001)
+│   └── live-arch.yaml                # Live architecture diagram, chart from the private live-arch repo
 ├── argocd/
 │   ├── values.yaml          # Argo CD chart values, consumed by applications/argocd.yaml via $values
-│   └── config/              # Tailscale Ingress + admin password ExternalSecret
+│   └── config/              # Tailscale Ingress, admin password and live-arch repo credentials (ExternalSecrets)
 ├── crashdummy/              # Raw manifests, including its ServiceMonitor
+├── live-arch/config/        # ghcr pull secret (ExternalSecret) + Tailscale Ingress
 ├── external-secrets/
 │   ├── values.yaml          # ESO chart values, consumed by applications/external-secrets.yaml via $values
 │   └── config/              # ESO runtime CRs (separate dir so the config Application can recurse cleanly without picking up values.yaml)
@@ -171,6 +173,17 @@ Phase 2's metrics pipeline starts with collection (OBS-001); storage (Mimir) and
 - **Nothing is stored yet.** Every `forward_to` in [`observability/alloy.yaml`](observability/alloy.yaml) is empty until Mimir lands (OBS-002).
 
 To scrape a new workload, add a `ServiceMonitor` next to its manifests (see [`crashdummy/servicemonitor.yaml`](crashdummy/servicemonitor.yaml)). If its Application syncs before the CRDs on a fresh cluster, give it a `retry` policy, or put the ServiceMonitor in `observability/config/` (as for Argo CD, so a missing CRD can never fail Argo CD's own sync).
+
+## live-arch
+
+[live-arch](https://github.com/igorsilva-dev/live-arch) draws the cluster as a live architecture diagram at `https://live-arch.<tailnet>.ts.net`. It only gets, lists and watches; its ClusterRole has no write verbs and nothing on Pods, Secrets or ConfigMaps. The chart comes straight from the live-arch repo, pinned to a release tag.
+
+The repo and its image are private, so two GitHub tokens live in Doppler (`k8s-codeup` / `dev`):
+
+- `LIVE_ARCH_REPO_TOKEN`: fine-grained, `igorsilva-dev/live-arch` only, Contents read. Becomes Argo CD's repository Secret ([`argocd/config/repo-live-arch.yaml`](argocd/config/repo-live-arch.yaml)).
+- `GHCR_READ_TOKEN`: classic, `read:packages` only (fine-grained tokens don't cover ghcr). Becomes the `ghcr-pull` Secret ([`live-arch/config/ghcr-pull.yaml`](live-arch/config/ghcr-pull.yaml)).
+
+To upgrade, bump `targetRevision` and `image.tag` together in [`applications/live-arch.yaml`](applications/live-arch.yaml).
 
 ## Accessing the Argo CD UI
 
