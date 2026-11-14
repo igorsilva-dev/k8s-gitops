@@ -1,0 +1,28 @@
+# Pull secret for the private ghcr.io/igorsilva-dev/live-arch image. GHCR_READ_TOKEN in Doppler is a
+# classic GitHub token with only the read:packages scope.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: ghcr-pull
+  namespace: live-arch
+  labels:
+    app.kubernetes.io/part-of: live-arch
+  annotations:
+    # Before the Deployment (wave 0) in the same Application, so the first pull already has it.
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: doppler
+    kind: ClusterSecretStore
+  target:
+    name: ghcr-pull
+    creationPolicy: Owner
+    template:
+      type: kubernetes.io/dockerconfigjson
+      data:
+        .dockerconfigjson: '{"auths":{"ghcr.io":{"auth":"{{ printf "%s:%s" "igorsilva-dev" .token | b64enc }}"}}}'
+  data:
+    - secretKey: token
+      remoteRef:
+        key: GHCR_READ_TOKEN

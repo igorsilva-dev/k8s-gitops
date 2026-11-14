@@ -1,0 +1,32 @@
+# Argo CD's read access to the private live-arch repo, where the live-arch Application's chart lives.
+# Kept here rather than in live-arch/config: Argo CD can't sync that Application at all until it can
+# read the repo. LIVE_ARCH_REPO_TOKEN in Doppler is a fine-grained GitHub token scoped to
+# igorsilva-dev/live-arch only, with Contents: read.
+apiVersion: external-secrets.io/v1
+kind: ExternalSecret
+metadata:
+  name: repo-live-arch
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: argocd
+spec:
+  refreshInterval: 1h
+  secretStoreRef:
+    name: doppler
+    kind: ClusterSecretStore
+  target:
+    name: repo-live-arch
+    creationPolicy: Owner
+    template:
+      metadata:
+        labels:
+          argocd.argoproj.io/secret-type: repository
+      data:
+        type: git
+        url: https://github.com/igorsilva-dev/live-arch.git
+        username: igorsilva-dev
+        password: "{{ .token }}"
+  data:
+    - secretKey: token
+      remoteRef:
+        key: LIVE_ARCH_REPO_TOKEN

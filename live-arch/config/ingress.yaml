@@ -1,0 +1,20 @@
+# live-arch on the tailnet: https://live-arch.<tailnet>.ts.net, like Argo CD (EDGE-002). Moves to an
+# HTTPRoute on Envoy Gateway (the chart's httpRoute values) once EDGE-003 lands.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: live-arch
+  namespace: live-arch
+  labels:
+    app.kubernetes.io/part-of: live-arch
+spec:
+  ingressClassName: tailscale
+  defaultBackend:
+    service:
+      name: live-arch
+      port:
+        name: http
+  tls:
+    # The tailnet name, not a DNS host: Tailscale ignores rule hosts and takes it from here.
+    - hosts:
+        - live-arch
