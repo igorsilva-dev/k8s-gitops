@@ -1,0 +1,49 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: live-arch
+  namespace: argocd
+  labels:
+    app.kubernetes.io/part-of: live-arch
+  annotations:
+    # After the Doppler ClusterSecretStore (wave 0) and the Tailscale operator (wave 1).
+    argocd.argoproj.io/sync-wave: "1"
+    # The ghcr-pull ExternalSecret would show CRD defaults as drift otherwise (see tailscale-operator.yaml).
+    argocd.argoproj.io/compare-options: ServerSideDiff=true
+spec:
+  project: default
+  sources:
+    # The chart from the private live-arch repo, pinned to a release. Argo CD reads it with the
+    # repository credentials in argocd/config/repo-live-arch.yaml.
+    - repoURL: https://github.com/igorsilva-dev/live-arch.git
+      targetRevision: v0.1.0
+      path: deploy/helm/live-arch
+      helm:
+        releaseName: live-arch
+        valuesObject:
+          # Stable across rebuilds: browser-side positions and board notes are keyed by it.
+          clusterName: k8s-labs
+          image:
+            tag: "0.1.0"
+          imagePullSecrets:
+            - name: ghcr-pull
+    # The image pull secret from Doppler and the Tailscale Ingress.
+    - repoURL: https://github.com/igorsilva-dev/k8s-gitops
+      targetRevision: main
+      path: live-arch/config
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: live-arch
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        maxDuration: 5m
+        factor: 2
