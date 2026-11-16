@@ -7,6 +7,9 @@ controller:
   replicas: 1
   metrics:
     enabled: true
+  # live-arch draws this edge: Alloy scrapes the controller (observability/config).
+  statefulsetAnnotations:
+    live-arch.igorsilva.dev/flows-to: "observability/alloy:metrics"
 
 redis-ha:
   enabled: false

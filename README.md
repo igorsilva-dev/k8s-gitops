@@ -183,6 +183,8 @@ The repo and its image are private, so two GitHub tokens live in Doppler (`k8s-c
 - `LIVE_ARCH_REPO_TOKEN`: fine-grained, `igorsilva-dev/live-arch` only, Contents read. Becomes Argo CD's repository Secret ([`argocd/config/repo-live-arch.yaml`](argocd/config/repo-live-arch.yaml)).
 - `GHCR_READ_TOKEN`: classic, `read:packages` only (fine-grained tokens don't cover ghcr). Becomes the `ghcr-pull` Secret ([`live-arch/config/ghcr-pull.yaml`](live-arch/config/ghcr-pull.yaml)).
 
+Edges Kubernetes can't see are declared on the workload where the data starts, with a `live-arch.igorsilva.dev/flows-to` annotation ([format](https://github.com/igorsilva-dev/live-arch/blob/main/docs/annotations.md)). For a chart, set it through the chart's workload-annotation value (`controller.statefulsetAnnotations` for Argo CD, `annotations` for kube-state-metrics, `daemonsetAnnotations` for node-exporter). Every scrape target annotates `observability/alloy:metrics`; add the same line to anything new Alloy scrapes.
+
 To upgrade, bump `targetRevision` and `image.tag` together in [`applications/live-arch.yaml`](applications/live-arch.yaml).
 
 ## Accessing the Argo CD UI

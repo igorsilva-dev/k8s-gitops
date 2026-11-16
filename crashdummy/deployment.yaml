@@ -5,6 +5,9 @@ metadata:
   labels:
     app.kubernetes.io/name: crashdummy
     app.kubernetes.io/part-of: crashdummy
+  annotations:
+    # live-arch draws this edge; Kubernetes can't see that Alloy scrapes /metrics here.
+    live-arch.igorsilva.dev/flows-to: "observability/alloy:metrics"
 spec:
   replicas: 1
   selector:
