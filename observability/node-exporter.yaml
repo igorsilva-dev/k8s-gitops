@@ -3,6 +3,10 @@ prometheus:
   monitor:
     enabled: true
 
+# live-arch draws this edge: Alloy scrapes every node-exporter.
+daemonsetAnnotations:
+  live-arch.igorsilva.dev/flows-to: "observability/alloy:metrics"
+
 resources:
   requests:
     cpu: 10m
